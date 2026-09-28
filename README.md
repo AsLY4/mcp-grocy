@@ -148,6 +148,37 @@ cp .env.example .env
 docker compose up -d
 ```
 
+### Home Assistant (App + Assist)
+
+[![Home Assistant App](https://img.shields.io/badge/Home%20Assistant-App-41BDF5?logo=homeassistant&logoColor=white)](DOCS.md) [![HACS custom repository](https://img.shields.io/badge/HACS-custom%20repository%20%28experimental%29-orange)](docs/home-assistant-hacs.md)
+
+mcp-grocy ships as a Home Assistant **App** (the name for add-ons since [HA 2026.2](https://www.home-assistant.io/blog/2026/02/04/release-20262/)). Once it runs, Home Assistant's built-in **Model Context Protocol** integration connects to it over the Supervisor's internal network and the Grocy tools become available to Assist and to any conversation agent. No MCP proxy is involved, and HACS is not needed: [HACS does not distribute Apps](https://hacs.xyz/docs/faq/addons).
+
+1. **Add the App repository** (Settings > Apps > App store > three dots > Repositories). Append `#main` to follow stable releases; the bare URL tracks the `dev` prerelease branch:
+
+   ```text
+   https://github.com/miguelangel-nubla/mcp-grocy#main
+   ```
+
+2. **Install "MCP Grocy API"**, set `grocy_base_url` and `grocy_api_key`, start it. The Supervisor builds the image locally for now (a few minutes). A read-only profile of 15 tools is seeded into `/addon_configs/<repository-hash>_mcp_grocy_api/mcp-grocy.yaml`; enable write tools there with your own `ack_token`s.
+3. **Connect Home Assistant:**
+
+   | Home Assistant    | How                                                                                                                                           |
+   | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+   | 2026.10 and later | Automatic: the App announces itself (core PR [#180378](https://github.com/home-assistant/core/pull/180378)); confirm the **Discovered** card. |
+   | 2026.2 - 2026.9   | Add integration > **Model Context Protocol** > `http://<hostname>:8080/mcp` (Streamable HTTP; the hostname is on the App's Info page).        |
+   | 2025.2 - 2026.1   | Same with `http://<hostname>:8080/mcp/sse` (SSE-only client).                                                                                 |
+
+4. **Enable the tools** in your assistant: Settings > Voice assistants > conversation agent options > **Control Home Assistant** > tick `mcp-grocy`.
+
+The MCP port is unauthenticated and, by default, not published on the host: only Home Assistant and other Apps can reach it. Map port 8080 only for clients outside Home Assistant.
+
+**Optional, experimental:** `custom_components/mcp_grocy` is a HACS companion integration (custom repository, category _Integration_, HA >= 2026.2) that adds one-click setup on HA 2026.2 - 2026.9 (`home_assistant_discovery: companion`), a connectivity sensor for the App, and removes the core entry when it is uninstalled. It has no static-token support and hands off to the core integration through an undocumented path, so it stays opt-in.
+
+**Not done yet** (see the study): prebuilt per-architecture App images, a static access token for the MCP port, and MCP `title`/`destructiveHint` annotations on the write tools.
+
+Full instructions, option reference and troubleshooting: [DOCS.md](DOCS.md) (also shown in the App's Documentation tab). Design notes and the feasibility study: [docs/home-assistant-hacs.md](docs/home-assistant-hacs.md). Local validation without a Home Assistant box: `scripts/addon/smoke-test.sh <image>` boots the App image against `scripts/addon/mock-supervisor.py`.
+
 ## ⚙️ Configuration
 
 ### Quick Setup
