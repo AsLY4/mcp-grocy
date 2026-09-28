@@ -1,0 +1,44 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+# ==============================================================================
+# Home Assistant App: MCP Grocy API - run the MCP server (s6 longrun)
+# No `set -x` here: it would print GROCY_API_KEY in the log.
+# ==============================================================================
+set -e
+declare port
+
+export GROCY_BASE_URL GROCY_API_KEY GROCY_ENABLE_SSL_VERIFY REST_RESPONSE_SIZE_LIMIT
+GROCY_BASE_URL=$(bashio::config 'grocy_base_url')
+GROCY_API_KEY=$(bashio::config 'grocy_api_key')
+GROCY_ENABLE_SSL_VERIFY=$(bashio::config 'enable_ssl_verify' 'true')
+# The option is named rest_response_size_limit (the 2.x script read response_size_limit).
+REST_RESPONSE_SIZE_LIMIT=$(bashio::config 'rest_response_size_limit' '10000')
+
+# Network daemon on a fixed container port; a host mapping (if any) is set in the
+# app's Network panel. The two legacy options are accepted but ignored.
+export ENABLE_HTTP_SERVER=true
+export HTTP_SERVER_PORT=8080
+export MCP_HTTP_TRANSPORT_ONLY=true
+if bashio::config.false 'enable_http_server'; then
+  bashio::log.warning "Option enable_http_server is ignored: the app always runs the HTTP server"
+fi
+port=$(bashio::config 'http_server_port' '8080')
+if [[ "${port}" != "8080" ]]; then
+  bashio::log.warning "Option http_server_port is ignored: the container port is fixed to 8080 (map a host port in the Network panel)"
+fi
+
+# Tool selection lives in the app config folder (/config here, /addon_configs/<repo>_mcp_grocy_api
+# on the host). Seed it once with the read-only Home Assistant profile, then let the
+# server find it next to build/ (ConfigManager looks for ./mcp-grocy.yaml in cwd).
+if ! bashio::fs.directory_exists '/config'; then
+  bashio::exit.nok "/config is not mounted: check the map entry (addon_config) in config.yaml, bump the app version and update the app"
+fi
+if ! bashio::fs.file_exists '/config/mcp-grocy.yaml'; then
+  bashio::log.info "Creating /config/mcp-grocy.yaml from the Home Assistant profile (read-only tools)"
+  cp /app/mcp-grocy.yaml.homeassistant /config/mcp-grocy.yaml
+fi
+ln -sfn /config/mcp-grocy.yaml /app/mcp-grocy.yaml
+
+bashio::log.info "Starting MCP Grocy API ${RELEASE_VERSION:-$(bashio::app.version 2>/dev/null || echo unknown)} (Grocy: ${GROCY_BASE_URL}, SSL verify: ${GROCY_ENABLE_SSL_VERIFY})"
+cd /app || bashio::exit.nok "Application directory /app is missing"
+exec node build/main.js

@@ -1,3 +1,7 @@
+# Still honoured by Supervisor local builds (logged as deprecated): injects the s6/bashio
+# base image and selects the "addon" final stage of the Dockerfile.
 build_from:
-  aarch64: 'ghcr.io/hassio-addons/base:21.0.5'
-  amd64: 'ghcr.io/hassio-addons/base:21.0.5'
+  aarch64: ghcr.io/hassio-addons/base:21.0.5
+  amd64: ghcr.io/hassio-addons/base:21.0.5
+args:
+  APP_TARGET: addon

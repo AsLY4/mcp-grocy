@@ -1,0 +1,68 @@
+name: Home Assistant app
+
+on:
+  pull_request:
+    paths:
+      [
+        config.yaml,
+        build.yaml,
+        repository.yaml,
+        Dockerfile,
+        'rootfs/**',
+        'translations/**',
+        'scripts/addon/**',
+        mcp-grocy.yaml.homeassistant,
+        .dockerignore,
+        .github/workflows/app-lint.yml,
+      ]
+  push:
+    branches: [main, dev]
+    paths:
+      [
+        config.yaml,
+        build.yaml,
+        repository.yaml,
+        Dockerfile,
+        'rootfs/**',
+        'translations/**',
+        'scripts/addon/**',
+        mcp-grocy.yaml.homeassistant,
+        .dockerignore,
+        .github/workflows/app-lint.yml,
+      ]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint app config and scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Lint config.yaml / build.yaml (JSON schema)
+        uses: frenck/action-app-linter@v2
+        with:
+          path: ./
+      - name: ShellCheck s6 scripts
+        run: shellcheck -s bash rootfs/etc/s6-overlay/s6-rc.d/*/run rootfs/etc/s6-overlay/s6-rc.d/*/finish scripts/addon/smoke-test.sh
+
+  smoke:
+    name: Build app image (amd64) and smoke-test with a mock Supervisor
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the app variant
+        run: |
+          docker buildx build --load \
+            --build-arg BUILD_FROM="$(yq -r '.build_from.amd64' build.yaml)" \
+            --build-arg BUILD_ARCH=amd64 --build-arg APP_TARGET=addon \
+            --build-arg RELEASE_VERSION=ci -t mcp-grocy-app:ci .
+      - name: Plain image still has CMD and no s6 services
+        run: |
+          docker buildx build --load -t mcp-grocy-plain:ci .
+          docker inspect -f '{{json .Config.Cmd}}' mcp-grocy-plain:ci | grep -q 'build/main.js'
+          ! docker run --rm --entrypoint sh mcp-grocy-plain:ci -c 'test -d /etc/s6-overlay/s6-rc.d/app'
+      - name: Smoke test
+        run: bash scripts/addon/smoke-test.sh mcp-grocy-app:ci

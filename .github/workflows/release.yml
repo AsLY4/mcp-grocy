@@ -143,6 +143,5 @@ jobs:
     uses: ./.github/workflows/publish-docker.yml
     with:
       release_version: ${{ needs.release.outputs.new_release_version }}
-  # Note: Home Assistant addon building is now handled automatically
-  # by the Builder workflow in the hassio-addons repository.
-  # The Builder workflow detects submodule updates and builds addons automatically.
+  # Note: the Home Assistant app has no prebuilt image: the Supervisor builds the
+  # Dockerfile locally on install (see config.yaml). Publishing per-arch images is a follow-up.

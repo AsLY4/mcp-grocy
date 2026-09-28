@@ -1,0 +1,7 @@
+# Makes this GitHub repository installable as a Home Assistant app repository
+# (Settings > Apps > App store > three dots > Repositories > add the repo URL).
+# The Supervisor scans the clone for config.yaml (glob "**/config.*", skipping "rootfs"
+# and dot-directories), so the root-level config.yaml is the one and only app here.
+name: MCP Grocy
+url: https://github.com/miguelangel-nubla/mcp-grocy
+maintainer: miguelangel-nubla

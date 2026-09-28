@@ -1,0 +1,77 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+# ==============================================================================
+# Home Assistant App: MCP Grocy API - announce the MCP endpoint to Home Assistant
+#
+# Supervisor discovery keeps one message per (app, service): re-sending at every
+# start is idempotent (same uuid, config updated in place; HA updates the entry URL).
+#   service "mcp"       -> core Model Context Protocol integration (HA >= 2026.10)
+#   service "mcp_grocy" -> optional HACS companion integration (any HA >= 2026.2)
+#
+# This is an s6 ONESHOT and the base image sets S6_BEHAVIOUR_IF_STAGE2_FAILS=2: a
+# non-zero exit here would stop the whole container. Every command is guarded and the
+# script always ends with bashio::exit.ok. Do NOT add `set -e`.
+# ==============================================================================
+declare mode host url ha_version slug announce
+
+mode=$(bashio::config 'home_assistant_discovery' 'auto')
+case "${mode}" in
+  companion) announce="mcp_grocy" ;;
+  off) announce="" ;;
+  *) announce="mcp" ;;
+esac
+
+# The Supervisor keeps one message per (app, service) and Home Assistant re-processes all of
+# them at every core start: drop the announcements this run will not (re)send, so switching
+# the mode (or turning discovery off) does not resurrect a stale Discovered card.
+slug=$(bashio::app.slug 2>/dev/null || true)
+if [[ -n "${slug}" ]]; then
+  while read -r uuid service; do
+    [[ -z "${uuid}" || "${service}" == "${announce}" ]] && continue
+    if bashio::discovery.delete "${uuid}" > /dev/null 2>&1; then
+      bashio::log.info "Removed stale Home Assistant discovery message for service ${service}"
+    fi
+  done < <(bashio::api.supervisor GET /discovery false 2>/dev/null \
+    | jq -r --arg slug "${slug}" '(.discovery // [])[] | select((.addon // .app) == $slug) | "\(.uuid) \(.service)"' 2>/dev/null || true)
+fi
+
+if [[ "${mode}" == "off" ]]; then
+  bashio::log.info "Home Assistant discovery is off (option home_assistant_discovery)"
+  bashio::exit.ok
+fi
+
+# Announce only a server that already accepts connections: HA connects right after
+# the user confirms the discovered card. (Always returns OK, at most 300 s.)
+bashio::net.wait_for 8080 127.0.0.1 300
+
+# Hostname on the Supervisor network: <repository-hash>-mcp-grocy-api (or local-mcp-grocy-api).
+host=$(bashio::app.hostname 2>/dev/null || bashio::addon.hostname 2>/dev/null || hostname)
+url="http://${host}:8080/mcp"
+
+if [[ "${mode}" == "companion" ]]; then
+  # HACS companion integration (custom_components/mcp_grocy).
+  if bashio::discovery "mcp_grocy" "$(jq -cn --arg url "${url}" '{url: $url}')" > /dev/null; then
+    bashio::log.info "Announced ${url} to the MCP Grocy integration (service mcp_grocy)"
+  else
+    bashio::log.warning "Could not announce to the MCP Grocy integration; add ${url} manually"
+  fi
+  bashio::exit.ok
+fi
+
+# mode auto | core -> core "mcp" integration.
+if [[ "${mode}" == "auto" ]]; then
+  # Core "mcp" gained its app discovery step in HA 2026.10 (core PR #180378). Older cores
+  # log an UnknownStep traceback for every message, so stay silent there.
+  ha_version=$(bashio::info.homeassistant 2>/dev/null || echo "0")
+  if [[ "$(printf '%s\n%s\n' "2026.10.0" "${ha_version}" | sort -V | head -n1)" != "2026.10.0" ]]; then
+    bashio::log.notice "Home Assistant ${ha_version} < 2026.10: no automatic discovery. Add the Model Context Protocol integration manually with URL ${url} (after upgrading Home Assistant, restart this app once to get the Discovered card)"
+    bashio::exit.ok
+  fi
+fi
+
+if bashio::discovery "mcp" "$(jq -cn --arg url "${url}" '{url: $url}')" > /dev/null; then
+  bashio::log.info "Announced ${url} to Home Assistant (service mcp)"
+else
+  bashio::log.warning "Could not announce the MCP server to Home Assistant; add ${url} manually"
+fi
+bashio::exit.ok

@@ -11,7 +11,7 @@
  */
 
 import { readFileSync, writeFileSync } from 'fs';
-import { parse, stringify } from 'yaml';
+import { parseDocument } from 'yaml';
 
 const version = process.argv[2];
 if (!version) {
@@ -22,11 +22,12 @@ if (!version) {
 try {
   const configPath = 'config.yaml';
   const configContent = readFileSync(configPath, 'utf8');
-  const config = parse(configContent);
+  // parseDocument keeps the comments and layout of config.yaml (parse/stringify would drop them)
+  const config = parseDocument(configContent);
 
-  config.version = version;
+  config.set('version', version);
 
-  const updatedContent = stringify(config);
+  const updatedContent = config.toString({ lineWidth: 0 }).replace(/\n+$/, '\n');
   writeFileSync(configPath, updatedContent);
 
   console.log(`Updated config.yaml with version ${version}`);

@@ -1,7 +1,8 @@
 name: MCP Grocy API
 version: 2.8.0
 slug: mcp_grocy_api
-description: Home Assistant addon for MCP server that communicates with Grocy REST API
+description: MCP server for Grocy, used by Home Assistant's Model Context Protocol integration (Assist)
+url: https://github.com/miguelangel-nubla/mcp-grocy
 arch:
   - aarch64
   - amd64
@@ -9,22 +10,42 @@ startup: application
 boot: auto
 init: false
 panel_icon: mdi:cart
+# Supervisor discovery services this app may announce (see rootfs/.../discovery/run):
+#   mcp       -> Home Assistant core "Model Context Protocol" integration (HA >= 2026.10)
+#   mcp_grocy -> optional HACS companion integration (custom_components/mcp_grocy)
+discovery:
+  - mcp
+  - mcp_grocy
+# /config inside the container == /addon_configs/<repo>_mcp_grocy_api on the host:
+# holds mcp-grocy.yaml (enabled tools / ack tokens), editable from Home Assistant.
+map:
+  - type: addon_config
+    read_only: false
+# GET / is the server's health endpoint. With host_network false the Supervisor probes
+# the container IP and the container port, so the null host mapping below is fine.
+watchdog: http://[HOST]:[PORT:8080]/
 options:
-  grocy_base_url: https://your-grocy-instance.com
+  grocy_base_url: http://a0d7b954-grocy:80
   grocy_api_key: your_grocy_api_key_here
   enable_ssl_verify: true
   rest_response_size_limit: 10000
-  enable_http_server: true
-  http_server_port: 8080
+  home_assistant_discovery: auto
 schema:
   grocy_base_url: url
   grocy_api_key: password
   enable_ssl_verify: bool?
   rest_response_size_limit: int(1000,)?
+  # auto: announce to the core integration when HA >= 2026.10; core: always announce;
+  # companion: announce to the HACS companion integration only; off: never.
+  home_assistant_discovery: list(auto|core|companion|off)?
+  # Legacy options (2.x): accepted, ignored with a warning. The container port is fixed.
   enable_http_server: bool?
   http_server_port: port?
+# Not published on the host by default: Home Assistant reaches the app on the
+# Supervisor network. Map it only for MCP clients outside Home Assistant.
 ports:
-  8080/tcp: "8080"
+  8080/tcp: null
 ports_description:
-  8080/tcp: Streamable HTTP / SSE port
-image: ghcr.io/miguelangel-nubla/hassio-addons/{arch}-addon-mcp-grocy-api
+  8080/tcp: MCP endpoint (Streamable HTTP /mcp, SSE /mcp/sse). Unauthenticated - leave unmapped unless a client outside Home Assistant needs it.
+# No `image:` yet: the Supervisor builds the Dockerfile locally on install (a few minutes).
+# Publishing prebuilt per-arch images is a follow-up (see docs/home-assistant-hacs.md).

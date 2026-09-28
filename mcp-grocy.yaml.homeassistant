@@ -1,0 +1,50 @@
+---
+# Default tool profile for the Home Assistant app.
+# Copied to /addon_configs/<repo>_mcp_grocy_api/mcp-grocy.yaml on first start and never
+# overwritten afterwards (delete the file and restart the app to reset it).
+#
+# Only read-only tools are enabled: small local models cope better with ~15 tools than
+# with all 56, and nothing here can modify your Grocy data. inventory_stock_get_all is left
+# out on purpose (it returns the whole stock in one answer: slow, and a large prompt for
+# small models; inventory_stock_get_volatile / _by_product / _by_location cover the questions). To enable write tools, copy the
+# entries you want from mcp-grocy.yaml.example and give each of them a PRIVATE ack_token
+# (never reuse the example tokens: they are public and a model could quote them).
+#
+# Home Assistant refreshes the tool list every 30 minutes: reload the Model Context
+# Protocol entry after editing this file.
+tools:
+  # Stock
+  inventory_stock_get_volatile: { enabled: true } # due soon / overdue / expired / below minimum
+  inventory_stock_get_by_location: { enabled: true }
+  inventory_stock_get_by_product: { enabled: true }
+  # Products
+  inventory_products_get: { enabled: true }
+  inventory_products_lookup: { enabled: true }
+  inventory_products_get_groups: { enabled: true }
+  # Shopping
+  shopping_lists_get: { enabled: true }
+  shopping_list_get: { enabled: true }
+  # Recipes and meal plan
+  recipes_management_get: { enabled: true }
+  recipes_fulfillment_get: { enabled: true }
+  recipes_mealplan_get: { enabled: true }
+  # Household
+  household_chores_get: { enabled: true }
+  household_tasks_get: { enabled: true }
+  # Reference data
+  system_locations_get: { enabled: true }
+  system_units_get: { enabled: true }
+  # --- Write tools: disabled. Example (generate your own token):
+  # shopping_list_add_item:
+  #   enabled: true
+  #   ack_token: <a private random phrase>
+  #
+  # A proven "stock + shopping + chores + meal plan" profile (14 tools, ~9 KB of tool
+  # definitions per conversation turn) for an assistant that may also act:
+  #   inventory_products_lookup, inventory_stock_get_by_product, inventory_stock_get_volatile,
+  #   inventory_transactions_purchase, inventory_transactions_consume,
+  #   shopping_lists_get, shopping_list_get, shopping_list_add_item, shopping_list_remove_item,
+  #   household_chores_get, household_chores_execute,
+  #   recipes_mealplan_get, recipes_mealplan_add_note, recipes_mealplan_delete_entry
+  # Keep system_dev_call_api / system_dev_test_request disabled: they expose the whole
+  # Grocy API to the model.
