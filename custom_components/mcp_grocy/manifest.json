@@ -1,0 +1,14 @@
+{
+  "domain": "mcp_grocy",
+  "name": "MCP Grocy",
+  "after_dependencies": ["hassio"],
+  "codeowners": ["@miguelangel-nubla"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/miguelangel-nubla/mcp-grocy/blob/main/DOCS.md",
+  "integration_type": "service",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/miguelangel-nubla/mcp-grocy/issues",
+  "requirements": [],
+  "version": "2.8.0"
+}

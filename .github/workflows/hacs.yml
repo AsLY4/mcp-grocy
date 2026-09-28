@@ -1,0 +1,60 @@
+name: HACS companion integration
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      [
+        'custom_components/**',
+        'tests/custom_components/**',
+        hacs.json,
+        pytest.ini,
+        requirements_test.txt,
+        .github/workflows/hacs.yml,
+      ]
+  pull_request:
+    paths:
+      [
+        'custom_components/**',
+        'tests/custom_components/**',
+        hacs.json,
+        pytest.ini,
+        requirements_test.txt,
+        .github/workflows/hacs.yml,
+      ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hacs:
+    name: HACS validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hacs/action@main
+        with:
+          category: integration
+          # topics/description live on the GitHub repo settings; brands is satisfied by
+          # custom_components/mcp_grocy/brand/icon.png (add "brands" here if the check
+          # still queries home-assistant/brands).
+          ignore: topics
+
+  hassfest:
+    name: hassfest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: home-assistant/actions/hassfest@master
+
+  tests:
+    name: pytest (pytest-homeassistant-custom-component)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+      - run: pip install -r requirements_test.txt
+      - run: pytest tests/custom_components -p no:cacheprovider

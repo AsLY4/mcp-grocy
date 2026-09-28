@@ -1,0 +1,48 @@
+{
+  "config": {
+    "flow_title": "MCP Grocy ({addon})",
+    "step": {
+      "user": {
+        "title": "MCP Grocy server",
+        "description": "URL of the mcp-grocy Streamable HTTP endpoint, e.g. {example_url}. When the app is installed its internal address is prefilled (app: {addon}).",
+        "data": {
+          "url": "URL"
+        }
+      },
+      "hassio_confirm": {
+        "title": "MCP Grocy via Home Assistant app",
+        "description": "Connect Home Assistant to the MCP server provided by the app {addon} at {url}? This creates a Model Context Protocol entry (enable the `mcp-grocy` API in your conversation agent afterwards) and a health sensor."
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the MCP server",
+      "timeout_connect": "Timeout while connecting to the MCP server",
+      "invalid_url": "Invalid URL",
+      "auth_required": "The MCP server requires an access token that Home Assistant cannot send. Run the server without MCP_HTTP_ACCESS_TOKEN.",
+      "missing_capabilities": "The MCP server does not expose any tools (check mcp-grocy.yaml in the app configuration folder)",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "This MCP server is already configured",
+      "invalid_discovery_info": "Invalid discovery information from the app",
+      "cannot_connect": "Failed to connect to the MCP server",
+      "timeout_connect": "Timeout while connecting to the MCP server",
+      "auth_required": "The MCP server requires an access token that Home Assistant cannot send. Run the server without MCP_HTTP_ACCESS_TOKEN.",
+      "missing_capabilities": "The MCP server does not expose any tools (check mcp-grocy.yaml in the app configuration folder)",
+      "unknown": "Unexpected error"
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "server": {
+        "name": "Server"
+      }
+    }
+  },
+  "issues": {
+    "core_entry_missing": {
+      "title": "MCP Grocy: Model Context Protocol entry is missing",
+      "description": "The Model Context Protocol entry for {url} no longer exists, so the Grocy tools are not available to Assist. Remove and re-add the MCP Grocy integration to recreate it."
+    }
+  }
+}

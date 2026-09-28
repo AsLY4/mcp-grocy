@@ -41,3 +41,8 @@ mcp-config.local.json
 
 # Local mcp-tef report output (npm run report:mcp-tef)
 reports/mcp-tef/
+
+# Python (HACS companion tests)
+__pycache__/
+.pytest_cache/
+.venv-ha/
